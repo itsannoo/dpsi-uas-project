@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/user');
+const User = require('../models/user'); // Pastikan ini sesuai dengan model User Anda
 
 // Register
 router.post('/register', async (req, res) => {
@@ -38,12 +37,7 @@ router.post('/register', async (req, res) => {
         // Save user
         await usersCollection.insertOne(user);
 
-        // Create token
-        const payload = { user: { id: user.id_user, role: user.role } };
-        jwt.sign(payload, 'your_jwt_secret', { expiresIn: '1h' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
+        res.json({ message: 'User registered successfully' });
 
     } catch (err) {
         console.error('Error during registration:', err.message);
@@ -51,14 +45,16 @@ router.post('/register', async (req, res) => {
     }
 });
 
-
 // Login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        const db = req.db;
+        const usersCollection = db.collection('users');
+
         // Check if user exists
-        let user = await User.findOne({ email });
+        let user = await usersCollection.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -70,7 +66,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Create token
-        const payload = { user: { id: user.id, role: user.role } };
+        const payload = { user: { id: user.id_user, role: user.role } };
         jwt.sign(payload, 'your_jwt_secret', { expiresIn: '24h' }, (err, token) => {
             if (err) throw err;
             res.json({ token });
