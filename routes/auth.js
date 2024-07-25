@@ -53,6 +53,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
+// Login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -60,19 +61,19 @@ router.post('/login', async (req, res) => {
         const db = req.db;
         const usersCollection = db.collection('users');
     
-        // Check if user exists
+        // Cek apakah pengguna sudah ada
         let user = await usersCollection.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Kredensial tidak valid' });
         }
     
-        // Check password
+        // Cek password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Kredensial tidak valid' });
         }
     
-        // Create token
+        // Buat token
         const payload = { user: { id: user.id_user, role: user.role } };
         jwt.sign(payload, 'your_jwt_secret', { expiresIn: '24h' }, (err, token) => {
             if (err) throw err;
@@ -81,7 +82,7 @@ router.post('/login', async (req, res) => {
     
     } catch (err) {
         console.error(err.message);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Kesalahan server' });
     }
     
 });
