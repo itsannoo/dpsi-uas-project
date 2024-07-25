@@ -1,4 +1,3 @@
-// routes/auth.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -54,16 +53,19 @@ router.post('/login', async (req, res) => {
         const db = req.db;
         const usersCollection = db.collection('users');
     
+        // Check if user exists
         let user = await usersCollection.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
     
+        // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
     
+        // Create token
         const payload = { user: { id: user.id_user, role: user.role } };
         jwt.sign(payload, 'your_jwt_secret', { expiresIn: '24h' }, (err, token) => {
             if (err) throw err;
