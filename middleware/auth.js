@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const secretKey = 'your_jwt_secret'; // Ganti dengan secret key yang aman
+const secretKey = 'your_jwt_secret'; 
 
 // Middleware untuk autentikasi menggunakan JWT
 const authenticate = async (req, res, next) => {
