@@ -51,7 +51,7 @@ router.delete('/:id', authenticate, authorize(['admin']), (req, res) => {
             }
             res.json({ message: 'Antrean deleted' });
         })
-        .catch(err => res.status(500).json({ message: err.message }));
+        .catch(err => res.status(500).json({ message: err.message })); 
 });
 
 module.exports = router;
