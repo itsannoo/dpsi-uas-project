@@ -10,6 +10,12 @@ const authRoutes = require('./routes/auth');
 // Middleware untuk parsing JSON
 app.use(express.json());
 
+
+// Route untuk root URL
+app.get('/', (req, res) => {
+    res.send('Selamat datang di API Anna Maulina');
+});
+
 // Menggunakan routes
 app.use('/dokter', dokterRoutes);
 app.use('/antrean', antreanRoutes);
