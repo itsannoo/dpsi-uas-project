@@ -1,5 +1,5 @@
 const express = require('express');
-const { main, getDb } = require('./models/index'); // Adjust the path as needed
+const { main, getDb } = require('./models/index'); 
 const dokterRoutes = require('./routes/dokter');
 const antreanRoutes = require('./routes/antrean');
 const konsultasiRoutes = require('./routes/konsultasi');
