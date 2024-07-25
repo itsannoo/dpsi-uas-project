@@ -1,31 +1,32 @@
 const jwt = require('jsonwebtoken');
+const secretKey = 'your_jwt_secret'; // Ganti dengan secret key yang aman
 
-const authenticate = (req, res, next) => {
-  const token = req.header('x-auth-token');
-  console.log(`Token received: ${token}`);
+// Middleware untuk autentikasi menggunakan JWT
+const authenticate = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
   if (!token) {
-      return res.status(401).json({ message: 'No token, authorization denied' });
+    return res.status(403).json({ message: 'Token tidak tersedia' });
   }
 
   try {
-      const decoded = jwt.verify(token, 'your_jwt_secret');
-      console.log('Token decoded:', decoded);
-      req.user = decoded.user;
-      next();
-  } catch (err) {
-      console.log('Token verification failed:', err.message);
-      res.status(401).json({ message: 'Token is not valid' });
+    const decoded = jwt.verify(token, secretKey);
+    req.user = decoded.user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Token tidak valid' });
   }
 };
 
+// Middleware untuk otorisasi role
 const authorize = (roles) => {
   return (req, res, next) => {
-      console.log(`User role: ${req.user.role}`);
-      if (!roles.includes(req.user.role)) {
-          console.log('User role not authorized');
-          return res.status(403).json({ message: 'Forbidden' });
-      }
+    if (roles.includes(req.user.role)) {
       next();
+    } else {
+      res.status(403).json({ message: 'Akses ditolak' });
+    }
   };
 };
 
