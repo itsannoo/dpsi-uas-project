@@ -1,33 +1,35 @@
 const jwt = require('jsonwebtoken');
-const secretKey = 'your_jwt_secret'; 
+const { getDb } = require('../models/index');
+const { ObjectId } = require('mongodb');
 
-// Middleware untuk autentikasi menggunakan JWT
 const authenticate = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
+  const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) {
-    return res.status(403).json({ message: 'Token tidak tersedia' });
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
   }
 
   try {
-    const decoded = jwt.verify(token, secretKey);
-    req.user = decoded.user;
+    const decoded = jwt.verify(token, 'your_jwt_secret');
+    const db = getDb();
+    const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.id) });
+    if (!user) {
+      throw new Error();
+    }
+    req.user = user;
     next();
-  } catch (error) {
-    return res.status(401).json({ message: 'Token tidak valid' });
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid token.' });
   }
 };
 
-// Middleware untuk otorisasi role
-const authorize = (roles) => {
-  return (req, res, next) => {
-    if (roles.includes(req.user.role)) {
-      next();
-    } else {
-      res.status(403).json({ message: 'Akses ditolak' });
-    }
-  };
+const authorize = (roles) => (req, res, next) => {
+  if (!roles.includes(req.user.role)) {
+    return res.status(403).json({ message: 'Access denied. You do not have permission to perform this action.' });
+  }
+  next();
 };
 
-module.exports = { authenticate, authorize };
+module.exports = {
+  authenticate,
+  authorize
+};

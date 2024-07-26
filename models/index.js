@@ -1,6 +1,6 @@
 const { MongoClient } = require('mongodb');
 
-// URL koneksi MongoDB. Jika MongoDB berjalan di mesin lokal pada port default, gunakan URL berikut
+// URL koneksi MongoDB Atlas
 const url = 'mongodb+srv://IlhamZul:ALST3vUl6e0QkPua@cluster0.lptggxk.mongodb.net/anna?retryWrites=true&w=majority&appName=Cluster0';
 
 // Nama database yang ingin Anda gunakan
@@ -20,7 +20,7 @@ async function main() {
         // Dapatkan referensi ke database
         db = client.db(dbName);
     } catch (err) {
-        console.error(err);
+        console.error('Failed to connect to MongoDB', err);
         throw err; // Ensure the error is thrown if connection fails
     }
 }

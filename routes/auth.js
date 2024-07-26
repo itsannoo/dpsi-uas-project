@@ -1,80 +1,78 @@
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/user');  
+const { authenticate, authorize } = require('../middleware/auth');
+const { getDb } = require('../models/index');
+const router = express.Router();
 
-// Register
+// Rute pendaftaran user
 router.post('/register', async (req, res) => {
-    const { id_user, nama, alamat, nomor_telepon, email, username, password, id_bank, role } = req.body;
+  try {
+    const { username, password, role } = req.body;
 
-    try {
-        const db = req.db;
-        const usersCollection = db.collection('users');
-    
-        // Check if user exists
-        let user = await usersCollection.findOne({ email });
-        if (user) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
-    
-        // Encrypt password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-    
-        // Create new user
-        user = {
-            id_user,
-            nama,
-            alamat,
-            nomor_telepon,
-            email,
-            username,
-            password: hashedPassword,
-            id_bank,
-            role
-        };
-    
-        // Save user
-        await usersCollection.insertOne(user);
-    
-        res.json({ message: 'User registered successfully' });
-    
-    } catch (err) {
-        res.status(500).json({ message: 'Server error' });
-    }    
+    // Validasi input
+    if (!username || !password || !role) {
+      return res.status(400).json({ message: 'Username, password, and role are required' });
+    }
+
+    const db = getDb();
+
+    // Cek apakah username sudah ada
+    const existingUser = await db.collection('users').findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Buat user baru
+    const newUser = { username, password: hashedPassword, role };
+    await db.collection('users').insertOne(newUser);
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (err) {
+    console.error('Error creating user:', err);
+    res.status(500).json({ message: 'Failed to register user' });
+  }
 });
 
-// Login
+// Rute login user
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-
     try {
-        const db = req.db;
-        const usersCollection = db.collection('users');
-    
-        // Check if user exists
-        let user = await usersCollection.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-    
-        // Check password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-    
-        // Create token
-        const payload = { user: { id: user.id_user, role: user.role } };
-        jwt.sign(payload, 'your_jwt_secret', { expiresIn: '24h' }, (err, token) => {
-            if (err) throw err;
-            res.json({ token });
-        });
-    
+      const { username, password } = req.body;
+  
+      // Validasi input
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+      }
+  
+      const db = getDb();
+  
+      // Cek user dan verifikasi password
+      const user = await db.collection('users').findOne({ username });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+  
+      // Buat token JWT
+      const token = jwt.sign({ id: user._id, role: user.role }, 'your_jwt_secret', { expiresIn: '24h' });
+      res.json({ token });
     } catch (err) {
-        res.status(500).json({ message: 'Server error' });
+      console.error('Error logging in user:', err);
+      res.status(500).json({ message: 'Failed to login user' });
     }
+  });
+  
+// Rute mendapatkan semua pengguna
+router.get('/users', authenticate, authorize(['admin']), async (req, res) => {
+  try {
+    const db = getDb();
+    const users = await db.collection('users').find().toArray();
+    res.status(200).json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ message: 'Failed to fetch users' });
+  }
 });
 
 module.exports = router;

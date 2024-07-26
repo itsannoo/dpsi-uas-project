@@ -6,8 +6,6 @@ const pasienSchema = new mongoose.Schema({
     alamat: { type: String, required: true },
     nomor_telepon: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    username: { type: String, required: true },
-    password: { type: String, required: true },
     id_bank: { type: Number, required: true }
 });
 
