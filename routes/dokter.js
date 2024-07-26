@@ -40,104 +40,94 @@ router.get('/:id', authenticate, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-// Create a new dokter
-router.post('/', authenticate, authorize(['admin']), async (req, res) => {
-  try {
-    const db = getDb();
-
-    // Validasi input
-    const { id_dokter, nama_dokter, spesialisasi, jam_konsultasi, id_bank } = req.body;
-    if (!id_dokter || !nama_dokter || !spesialisasi || !jam_konsultasi || !id_bank) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    // Cek apakah id_dokter sudah ada
-    const existingDokter = await db.collection('dokters').findOne({ id_dokter });
-    if (existingDokter) {
-      return res.status(400).json({ message: 'id_dokter already exists' });
-    }
-
-    // Buat dokter baru
-    const newDokter = {
-      id_dokter,
-      nama_dokter,
-      spesialisasi,
-      jam_konsultasi,
-      id_bank
-    };
-
-    await db.collection('dokters').insertOne(newDokter);
-    res.status(201).json(newDokter);
-  } catch (err) {
-    console.error('Error creating dokter:', err);
-    res.status(500).json({ message: 'Failed to create dokter' });
-  }
-});
-
 // Update a dokter by id_dokter
 router.put('/:id', authenticate, authorize(['admin']), async (req, res) => {
     try {
       const db = getDb();
+      const dokterId = parseInt(req.params.id, 10);
+  
+      if (isNaN(dokterId)) {
+        console.log(`Invalid dokter ID: ${req.params.id}`);
+        return res.status(400).json({ message: 'Invalid dokter ID' });
+      }
+  
       const updatedDokter = {
         nama_dokter: req.body.nama_dokter,
         spesialisasi: req.body.spesialisasi,
         jam_konsultasi: req.body.jam_konsultasi,
-        id_bank: req.body.id_bank // Sesuaikan tipe data jika diperlukan
+        id_bank: req.body.id_bank
       };
   
-      // Tambahkan log untuk id_dokter yang diterima
-      console.log(`Mencari dokter dengan id_dokter: ${req.params.id}`);
-  
-      const dokter = await db.collection('dokters').findOne({ id_dokter: req.params.id });
+      console.log(`Looking for dokter with id_dokter: ${dokterId}`);
+      const dokter = await db.collection('dokters').findOne({ id_dokter: dokterId });
       if (!dokter) {
-        console.log(`Dokter dengan id_dokter ${req.params.id} tidak ditemukan`);
-        return res.status(404).json({ message: 'Dokter tidak ditemukan' });
+        console.log(`Dokter with id_dokter ${dokterId} not found`);
+        return res.status(404).json({ message: 'Dokter not found' });
       }
   
-      const result = await db.collection('dokters').findOneAndUpdate(
-        { id_dokter: req.params.id },
-        { $set: updatedDokter },
-        { returnDocument: 'after' }
+      console.log('Dokter found:', dokter);
+  
+      const updateResult = await db.collection('dokters').updateOne(
+        { id_dokter: dokterId },
+        { $set: updatedDokter }
       );
   
-      if (!result || !result.value) {
-        console.log(`Dokter dengan id_dokter ${req.params.id} tidak ditemukan`);
-        return res.status(404).json({ message: 'Dokter tidak ditemukan' });
+      if (updateResult.matchedCount === 0) {
+        console.log(`Dokter with id_dokter ${dokterId} not found after update`);
+        return res.status(404).json({ message: 'Dokter not found' });
       }
   
-      const { _id, ...dokterWithoutId } = result.value;
+      const updatedDokterDocument = await db.collection('dokters').findOne({ id_dokter: dokterId });
+      console.log('Updated dokter:', updatedDokterDocument);
+  
+      const { _id, ...dokterWithoutId } = updatedDokterDocument;
       res.json(dokterWithoutId);
     } catch (err) {
       console.error('Error updating dokter:', err);
       res.status(400).json({ message: err.message });
     }
   });
-  
   // Delete a dokter by id_dokter
-  router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
+router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
     try {
       const db = getDb();
+      const dokterId = parseInt(req.params.id, 10);
   
-      // Tambahkan log untuk id_dokter yang diterima
-      console.log(`Mencari dokter dengan id_dokter: ${req.params.id}`);
+      if (isNaN(dokterId)) {
+        console.log(`Invalid dokter ID: ${req.params.id}`);
+        return res.status(400).json({ message: 'Invalid dokter ID' });
+      }
   
-      const dokter = await db.collection('dokters').findOne({ id_dokter: req.params.id });
+      console.log(`dokterId: ${dokterId} (type: ${typeof dokterId})`);
+  
+      console.log(`Looking for dokter with id_dokter: ${dokterId}`);
+      const dokter = await db.collection('dokters').findOne({ id_dokter: dokterId });
+      console.log('Query executed:', { id_dokter: dokterId });
       if (!dokter) {
-        console.log(`Dokter dengan id_dokter ${req.params.id} tidak ditemukan`);
-        return res.status(404).json({ message: 'Dokter tidak ditemukan' });
+        console.log(`Dokter with id_dokter ${dokterId} not found`);
+        return res.status(404).json({ message: 'Dokter not found' });
       }
   
-      const result = await db.collection('dokters').findOneAndDelete({ id_dokter: req.params.id });
-      if (!result || !result.value) {
-        console.log(`Dokter dengan id_dokter ${req.params.id} tidak ditemukan`);
-        return res.status(404).json({ message: 'Dokter tidak ditemukan' });
+      console.log(`Dokter found before delete: ${JSON.stringify(dokter)}`);
+  
+      const deleteResult = await db.collection('dokters').deleteOne({ id_dokter: dokterId });
+      console.log('Result of deleteOne:', deleteResult);
+  
+      const dokterAfterDelete = await db.collection('dokters').findOne({ id_dokter: dokterId });
+      console.log(`Dokter found after delete attempt: ${JSON.stringify(dokterAfterDelete)}`);
+  
+      if (deleteResult.deletedCount) {
+        console.log(`Dokter with id_dokter ${dokterId} deleted successfully`);
+        res.json({ message: 'Dokter deleted' });
+      } else {
+        console.log(`Failed to delete dokter with id_dokter ${dokterId}`);
+        res.status(500).json({ message: 'Failed to delete dokter' });
       }
-      res.json({ message: 'Dokter dihapus' });
     } catch (err) {
       console.error('Error deleting dokter:', err);
       res.status(500).json({ message: err.message });
     }
   });
+  
   
   module.exports = router;

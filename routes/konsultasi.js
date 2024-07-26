@@ -72,11 +72,18 @@ router.post('/', authenticate, authorize(['admin', 'dokter']), async (req, res) 
   }
 });
 
+
 // Update a konsultasi by id_konsultasi
 router.put('/:id', authenticate, authorize(['admin', 'dokter']), async (req, res) => {
     try {
       const db = getDb();
       const konsultasiId = parseInt(req.params.id, 10);
+  
+      if (isNaN(konsultasiId)) {
+        console.log(`Invalid konsultasi ID: ${req.params.id}`);
+        return res.status(400).json({ message: 'Invalid konsultasi ID' });
+      }
+  
       const updatedKonsultasi = {
         id_pasien: req.body.id_pasien,
         id_dokter: req.body.id_dokter,
@@ -90,18 +97,27 @@ router.put('/:id', authenticate, authorize(['admin', 'dokter']), async (req, res
       const result = await db.collection('konsultasis').findOneAndUpdate(
         { id_konsultasi: konsultasiId },
         { $set: updatedKonsultasi },
-        { returnDocument: 'after' }
+        { returnDocument: 'after' }  // Using returnDocument: 'after' for latest MongoDB driver compatibility
       );
   
-      if (result && result.value) {
-        res.status(200).json(result.value);
+      console.log('Result of findOneAndUpdate:', result);
+  
+      if (result && result.ok && result.value) {
+        console.log('Updated konsultasi:', result.value);
+        res.status(200).json({
+          message: 'Konsultasi berhasil diperbarui',
+          data: result.value
+        });
       } else {
+        console.log(`Konsultasi dengan id_konsultasi ${konsultasiId} tidak ditemukan`);
         res.status(404).json({ message: 'Konsultasi tidak ditemukan' });
       }
     } catch (error) {
+      console.error('Error updating konsultasi:', error);
       res.status(500).json({ error: error.message });
     }
   });
+  
   
   // Delete a konsultasi by id_konsultasi
   router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
