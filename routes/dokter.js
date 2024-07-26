@@ -3,7 +3,43 @@ const router = express.Router();
 const { getDb } = require('../models/index');
 const { authenticate, authorize } = require('../middleware/auth');
 
-// Get all dokters
+
+// Create a new dokter
+router.post('/', authenticate, authorize(['admin']), async (req, res) => {
+    try {
+      const db = getDb();
+      
+      // Validasi data yang diterima
+      const { nama_dokter, spesialisasi, jam_konsultasi, id_bank } = req.body;
+      
+      if (!nama_dokter || !spesialisasi || !jam_konsultasi || !id_bank) {
+        console.log('Missing required fields');
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+      
+      // Buat dokter baru
+      const newDokter = {
+        nama_dokter,
+        spesialisasi,
+        jam_konsultasi,
+        id_bank
+      };
+  
+      const result = await db.collection('dokters').insertOne(newDokter);
+      
+      // Mengambil data dokter yang baru ditambahkan
+      const addedDokter = await db.collection('dokters').findOne({ _id: result.insertedId });
+      
+      // Menghapus field _id dari respon
+      const { _id, ...dokterWithoutId } = addedDokter;
+      
+      res.status(201).json(dokterWithoutId);
+    } catch (err) {
+      console.error('Error creating dokter:', err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+  
 router.get('/', authenticate, async (req, res) => {
   try {
     const db = getDb();
@@ -42,51 +78,51 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 // Update a dokter by id_dokter
 router.put('/:id', authenticate, authorize(['admin']), async (req, res) => {
-    try {
-      const db = getDb();
-      const dokterId = parseInt(req.params.id, 10);
-  
-      if (isNaN(dokterId)) {
-        console.log(`Invalid dokter ID: ${req.params.id}`);
-        return res.status(400).json({ message: 'Invalid dokter ID' });
-      }
-  
-      const updatedDokter = {
-        nama_dokter: req.body.nama_dokter,
-        spesialisasi: req.body.spesialisasi,
-        jam_konsultasi: req.body.jam_konsultasi,
-        id_bank: req.body.id_bank
-      };
-  
-      console.log(`Looking for dokter with id_dokter: ${dokterId}`);
-      const dokter = await db.collection('dokters').findOne({ id_dokter: dokterId });
-      if (!dokter) {
-        console.log(`Dokter with id_dokter ${dokterId} not found`);
-        return res.status(404).json({ message: 'Dokter not found' });
-      }
-  
-      console.log('Dokter found:', dokter);
-  
-      const updateResult = await db.collection('dokters').updateOne(
-        { id_dokter: dokterId },
-        { $set: updatedDokter }
-      );
-  
-      if (updateResult.matchedCount === 0) {
-        console.log(`Dokter with id_dokter ${dokterId} not found after update`);
-        return res.status(404).json({ message: 'Dokter not found' });
-      }
-  
-      const updatedDokterDocument = await db.collection('dokters').findOne({ id_dokter: dokterId });
-      console.log('Updated dokter:', updatedDokterDocument);
-  
-      const { _id, ...dokterWithoutId } = updatedDokterDocument;
-      res.json(dokterWithoutId);
-    } catch (err) {
-      console.error('Error updating dokter:', err);
-      res.status(400).json({ message: err.message });
+  try {
+    const db = getDb();
+    const dokterId = parseInt(req.params.id, 10);
+
+    if (isNaN(dokterId)) {
+      console.log(`Invalid dokter ID: ${req.params.id}`);
+      return res.status(400).json({ message: 'Invalid dokter ID' });
     }
-  });
+
+    const updatedDokter = {
+      nama_dokter: req.body.nama_dokter,
+      spesialisasi: req.body.spesialisasi,
+      jam_konsultasi: req.body.jam_konsultasi,
+      id_bank: req.body.id_bank
+    };
+
+    console.log(`Looking for dokter with id_dokter: ${dokterId}`);
+    const dokter = await db.collection('dokters').findOne({ id_dokter: dokterId });
+    if (!dokter) {
+      console.log(`Dokter with id_dokter ${dokterId} not found`);
+      return res.status(404).json({ message: 'Dokter not found' });
+    }
+
+    console.log('Dokter found:', dokter);
+
+    const updateResult = await db.collection('dokters').updateOne(
+      { id_dokter: dokterId },
+      { $set: updatedDokter }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      console.log(`Dokter with id_dokter ${dokterId} not found after update`);
+      return res.status(404).json({ message: 'Dokter not found' });
+    }
+
+    const updatedDokterDocument = await db.collection('dokters').findOne({ id_dokter: dokterId });
+    console.log('Updated dokter:', updatedDokterDocument);
+
+    const { _id, ...dokterWithoutId } = updatedDokterDocument;
+    res.json(dokterWithoutId);
+  } catch (err) {
+    console.error('Error updating dokter:', err);
+    res.status(400).json({ message: err.message });
+  }
+});
   // Delete a dokter by id_dokter
 router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
     try {
